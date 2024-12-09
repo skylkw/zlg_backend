@@ -1,0 +1,1 @@
+import{_ as e}from"./_plugin-vue_export-helper-DlAUqK2U.js";import{f as r,h as t,o as n}from"./index-DdLaXbAr.js";const s={};function a(c,o){return n(),r("div",null,o[0]||(o[0]=[t("h1",null,"Motor",-1)]))}const _=e(s,[["render",a]]);export{_ as default};

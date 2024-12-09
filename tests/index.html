@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZLG CAN Manager</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- JSONEditor CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.6/dist/jsoneditor.min.css" rel="stylesheet" type="text/css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            padding-top: 70px;
+        }
+
+        /* 导航栏样式 */
+        .navbar-custom {
+            background-color: #343a40;
+        }
+
+        .navbar-custom .navbar-brand,
+        .navbar-custom .nav-link {
+            color: #ffffff;
+        }
+
+        .navbar-custom .nav-link:hover {
+            color: #adb5bd;
+        }
+
+        /* 容器样式 */
+        .container {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 表单样式 */
+        form label {
+            font-weight: 600;
+        }
+
+        form input,
+        form select,
+        form button {
+            border-radius: 5px;
+        }
+
+        form button {
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        form button:hover {
+            transform: translateY(-2px);
+        }
+
+        /* JSON编辑器容器 */
+        .json-editor-container {
+            height: 250px;
+        }
+
+        /* 实时数据展示区 */
+        #data-container {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.05);
+        }
+
+        #data-container p {
+            background-color: #e9ecef;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            word-wrap: break-word;
+            transition: background-color 0.3s;
+        }
+
+        #data-container p:hover {
+            background-color: #dae0e5;
+        }
+
+        /* 按钮样式 */
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #004085;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+
+        .btn-success:hover {
+            background-color: #1e7e34;
+            border-color: #1c7430;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+            border-color: #d39e00;
+            color: #fff;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .json-editor-container {
+                height: 200px;
+            }
+        }
+
+        /* Toast 容器样式 */
+        #toast-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1055;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">ZLG CAN Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="切换导航">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">首页</a>
+                    </li>
+                    <!-- 可以添加更多导航项 -->
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <div class="container">
+        <h2>设备管理</h2>
+        <div class="accordion" id="deviceAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOpenDevice">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseOpenDevice" aria-expanded="true" aria-controls="collapseOpenDevice">
+                        打开设备
+                    </button>
+                </h2>
+                <div id="collapseOpenDevice" class="accordion-collapse collapse show"
+                    aria-labelledby="headingOpenDevice" data-bs-parent="#deviceAccordion">
+                    <div class="accordion-body">
+                        <form id="openDeviceForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="deviceType" class="form-label">设备类型:</label>
+                                <input type="number" class="form-control" id="deviceType" name="deviceType" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="deviceIndex" class="form-label">设备索引:</label>
+                                <input type="number" class="form-control" id="deviceIndex" name="deviceIndex" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary">打开设备</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingCloseDevice">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseCloseDevice" aria-expanded="false" aria-controls="collapseCloseDevice">
+                        关闭设备
+                    </button>
+                </h2>
+                <div id="collapseCloseDevice" class="accordion-collapse collapse" aria-labelledby="headingCloseDevice"
+                    data-bs-parent="#deviceAccordion">
+                    <div class="accordion-body">
+                        <button id="closeDeviceButton" class="btn btn-danger">关闭设备</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>通道管理</h2>
+        <div class="accordion" id="channelAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOpenChannel">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseOpenChannel" aria-expanded="true" aria-controls="collapseOpenChannel">
+                        打开通道
+                    </button>
+                </h2>
+                <div id="collapseOpenChannel" class="accordion-collapse collapse show"
+                    aria-labelledby="headingOpenChannel" data-bs-parent="#channelAccordion">
+                    <div class="accordion-body">
+                        <form id="openChannelForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="channel" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="channel" name="channel" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="baudRate" class="form-label">波特率:</label>
+                                <input type="text" class="form-control" id="baudRate" name="baudRate" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary">打开通道</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingCloseChannel">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseCloseChannel" aria-expanded="false"
+                        aria-controls="collapseCloseChannel">
+                        关闭通道
+                    </button>
+                </h2>
+                <div id="collapseCloseChannel" class="accordion-collapse collapse" aria-labelledby="headingCloseChannel"
+                    data-bs-parent="#channelAccordion">
+                    <div class="accordion-body">
+                        <form id="closeChannelForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="closeChn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="closeChn" name="closeChn" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-danger">关闭通道</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>消息管理</h2>
+        <div class="accordion" id="messageAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSendMessage">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseSendMessage" aria-expanded="true" aria-controls="collapseSendMessage">
+                        发送消息
+                    </button>
+                </h2>
+                <div id="collapseSendMessage" class="accordion-collapse collapse show"
+                    aria-labelledby="headingSendMessage" data-bs-parent="#messageAccordion">
+                    <div class="accordion-body">
+                        <form id="sendMessageForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="chn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="chn" name="chn" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="datas" class="form-label">数据 (JSON 格式):</label>
+                                <div class="json-editor-container">
+                                    <div id="datas-editor"></div>
+                                </div>
+                                <input type="hidden" id="datas" name="datas">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="eff" class="form-label">EFF:</label>
+                                <input type="number" class="form-control" id="eff" name="eff" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="transmitType" class="form-label">发送类型:</label>
+                                <input type="number" class="form-control" id="transmitType" name="transmitType"
+                                    value="0">
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary">发送消息</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingAutoSendMessage">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseAutoSendMessage" aria-expanded="false"
+                        aria-controls="collapseAutoSendMessage">
+                        启动自动发送消息
+                    </button>
+                </h2>
+                <div id="collapseAutoSendMessage" class="accordion-collapse collapse"
+                    aria-labelledby="headingAutoSendMessage" data-bs-parent="#messageAccordion">
+                    <div class="accordion-body">
+                        <form id="startAutoSendMessageForm" class="row g-3">
+                            <div class="col-md-4">
+                                <label for="autoChn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="autoChn" name="autoChn" required>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="autoDatas" class="form-label">数据 (JSON 格式):</label>
+                                <div class="json-editor-container">
+                                    <div id="autoDatas-editor"></div>
+                                </div>
+                                <input type="hidden" id="autoDatas" name="autoDatas">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="autoEff" class="form-label">EFF:</label>
+                                <input type="number" class="form-control" id="autoEff" name="autoEff" value="1">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="autoTransmitType" class="form-label">发送类型:</label>
+                                <input type="number" class="form-control" id="autoTransmitType" name="autoTransmitType"
+                                    value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="interval" class="form-label">间隔 (ms):</label>
+                                <input type="number" class="form-control" id="interval" name="interval" value="50">
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-success">启动自动发送</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingStopAutoSendMessage">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseStopAutoSendMessage" aria-expanded="false"
+                        aria-controls="collapseStopAutoSendMessage">
+                        停止自动发送消息
+                    </button>
+                </h2>
+                <div id="collapseStopAutoSendMessage" class="accordion-collapse collapse"
+                    aria-labelledby="headingStopAutoSendMessage" data-bs-parent="#messageAccordion">
+                    <div class="accordion-body">
+                        <form id="stopAutoSendMessageForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="stopAutoChn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="stopAutoChn" name="stopAutoChn" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-danger">停止自动发送</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>接收消息管理</h2>
+        <div class="accordion" id="receiveAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingStartReceive">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseStartReceive" aria-expanded="true"
+                        aria-controls="collapseStartReceive">
+                        启动接收消息
+                    </button>
+                </h2>
+                <div id="collapseStartReceive" class="accordion-collapse collapse show"
+                    aria-labelledby="headingStartReceive" data-bs-parent="#receiveAccordion">
+                    <div class="accordion-body">
+                        <form id="startReceiveMessageForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="receiveChn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="receiveChn" name="receiveChn" required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-primary">启动接收</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingStopReceive">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseStopReceive" aria-expanded="false" aria-controls="collapseStopReceive">
+                        停止接收消息
+                    </button>
+                </h2>
+                <div id="collapseStopReceive" class="accordion-collapse collapse" aria-labelledby="headingStopReceive"
+                    data-bs-parent="#receiveAccordion">
+                    <div class="accordion-body">
+                        <form id="stopReceiveMessageForm" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="stopReceiveChn" class="form-label">通道:</label>
+                                <input type="number" class="form-control" id="stopReceiveChn" name="stopReceiveChn"
+                                    required>
+                            </div>
+                            <div class="col-12 text-end">
+                                <button type="submit" class="btn btn-danger">停止接收</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>SSE 订阅</h2>
+        <form id="subscribeSSEForm" class="row g-3">
+            <div class="col-md-6">
+                <label for="sseChn" class="form-label">通道:</label>
+                <input type="number" class="form-control" id="sseChn" name="sseChn" required>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button id="subscribeSSEButton" type="button" class="btn btn-success me-2">订阅</button>
+                <button id="unsubscribeSSEButton" type="button" class="btn btn-warning">取消订阅</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="container">
+
+        <h2>电机控制</h2>
+        <div class="accordion" id="motorControlAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingMotor0">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseMotor0" aria-expanded="true" aria-controls="collapseMotor0">
+                        电机0 控制
+                    </button>
+                </h2>
+                <div id="collapseMotor0" class="accordion-collapse collapse show" aria-labelledby="headingMotor0"
+                    data-bs-parent="#motorControlAccordion">
+                    <div class="accordion-body">
+                        <form id="motor0ControlForm" class="row g-3">
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-success" id="enableMotor0">使能电机0</button>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-danger" id="disableMotor0">失能电机0</button>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="motor0Speed" class="form-label">设置速度:</label>
+                                <input type="number" class="form-control" id="motor0Speed" name="motor0Speed" required>
+                                <label for="motor0Mode" class="form-label mt-2">模式:</label>
+                                <input type="number" class="form-control" id="motor0Mode" name="motor0Mode" required>
+                                <label for="motor0Gear" class="form-label mt-2">挡位:</label>
+                                <input type="number" class="form-control" id="motor0Gear" name="motor0Gear" required>
+                                <button type="button" class="btn btn-primary mt-2" id="setMotor0Speed">设置电机0速度</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 电机1控制 -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingMotor1">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseMotor1" aria-expanded="false" aria-controls="collapseMotor1">
+                        电机1 控制
+                    </button>
+                </h2>
+                <div id="collapseMotor1" class="accordion-collapse collapse" aria-labelledby="headingMotor1"
+                    data-bs-parent="#motorControlAccordion">
+                    <div class="accordion-body">
+                        <form id="motor1ControlForm" class="row g-3">
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-success" id="enableMotor1">使能电机1</button>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-danger" id="disableMotor1">失能电机1</button>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="motor1Speed" class="form-label">设置速度:</label>
+                                <input type="number" class="form-control" id="motor1Speed" name="motor1Speed" required>
+                                <label for="motor1Mode" class="form-label mt-2">模式:</label>
+                                <input type="number" class="form-control" id="motor1Mode" name="motor1Mode" required>
+                                <label for="motor1Gear" class="form-label mt-2">挡位:</label>
+                                <input type="number" class="form-control" id="motor1Gear" name="motor1Gear" required>
+                                <button type="button" class="btn btn-primary mt-2" id="setMotor1Speed">设置电机1速度</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+    <!-- Toast 容器 -->
+    <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- JSONEditor JS -->
+    <script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.5.6/dist/jsoneditor.min.js"></script>
+    <script>
+        // 初始化 JSON 编辑器
+        const datasEditor = new JSONEditor(document.getElementById('datas-editor'), {
+            mode: 'tree',
+            search: true,
+            onError: function (err) {
+                showToast('JSON 编辑器错误: ' + err.toString(), 'danger');
+            },
+            onModeChange: function (newMode, oldMode) {
+                console.log('JSONEditor 模式从', oldMode, '切换到', newMode);
+            }
+        });
+
+        const autoDatasEditor = new JSONEditor(document.getElementById('autoDatas-editor'), {
+            mode: 'tree',
+            search: true,
+            onError: function (err) {
+                showToast('JSON 编辑器错误: ' + err.toString(), 'danger');
+            },
+            onModeChange: function (newMode, oldMode) {
+                console.log('JSONEditor 模式从', oldMode, '切换到', newMode);
+            }
+        });
+
+        // 显示 Toast 通知
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            const toastId = `toast-${Date.now()}`;
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="关闭"></button>
+                    </div>
+                </div>
+            `;
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            toast.show();
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        // 通用的响应处理函数
+        async function handleResponse(response) {
+            try {
+                const result = await response.json();
+                if (response.ok) {
+                    // 根据 status 字段设置 Toast 类型
+                    let toastType = 'success'; // 默认
+                    if (result.status === 'success') {
+                        toastType = 'success';
+                    } else if (result.status === 'error') {
+                        toastType = 'danger';
+                    } else if (result.status === 'warning') {
+                        toastType = 'warning';
+                    } else {
+                        toastType = 'info';
+                    }
+                    showToast(result.message, toastType);
+                } else {
+                    // 处理非 2xx 状态码
+                    let toastType = 'danger';
+                    if (result.status === 'warning') {
+                        toastType = 'warning';
+                    }
+                    showToast(result.message || '请求失败', toastType);
+                }
+            } catch (error) {
+                showToast('解析响应失败: ' + error.message, 'danger');
+            }
+        }
+
+        // 表单提交处理
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const formId = form.id;
+                let url = '';
+                let data = {};
+
+                switch (formId) {
+                    case 'openDeviceForm':
+                        data = {
+                            device_type: parseInt(document.getElementById('deviceType').value),
+                            device_index: parseInt(document.getElementById('deviceIndex').value)
+                        };
+                        url = '/open_device';
+                        break;
+                    case 'openChannelForm':
+                        data = {
+                            chn: parseInt(document.getElementById('channel').value),
+                            baud_rate: document.getElementById('baudRate').value
+                        };
+                        url = '/open_channel';
+                        break;
+                    case 'sendMessageForm':
+                        try {
+                            data = {
+                                chn: parseInt(document.getElementById('chn').value),
+                                datas: datasEditor.get(),
+                                eff: parseInt(document.getElementById('eff').value),
+                                transmit_type: parseInt(document.getElementById('transmitType').value)
+                            };
+                        } catch (e) {
+                            showToast('无效的 JSON 数据: ' + e.message, 'danger');
+                            return;
+                        }
+                        url = '/send_message';
+                        break;
+                    case 'startAutoSendMessageForm':
+                        try {
+                            data = {
+                                chn: parseInt(document.getElementById('autoChn').value),
+                                datas: autoDatasEditor.get(),
+                                eff: parseInt(document.getElementById('autoEff').value),
+                                transmit_type: parseInt(document.getElementById('autoTransmitType').value),
+                                interval: parseInt(document.getElementById('interval').value)
+                            };
+                        } catch (e) {
+                            showToast('无效的 JSON 数据: ' + e.message, 'danger');
+                            return;
+                        }
+                        url = '/start_auto_send_message';
+                        break;
+                    case 'stopAutoSendMessageForm':
+                        data = {
+                            chn: parseInt(document.getElementById('stopAutoChn').value)
+                        };
+                        url = '/stop_auto_send_message';
+                        break;
+                    case 'startReceiveMessageForm':
+                        data = {
+                            chn: parseInt(document.getElementById('receiveChn').value)
+                        };
+                        url = '/start_receive_message';
+                        break;
+                    case 'stopReceiveMessageForm':
+                        data = {
+                            chn: parseInt(document.getElementById('stopReceiveChn').value)
+                        };
+                        url = '/stop_receive_message';
+                        break;
+                    case 'closeChannelForm':
+                        data = {
+                            chn: parseInt(document.getElementById('closeChn').value)
+                        };
+                        url = '/close_channel';
+                        break;
+                    default:
+                        break;
+                }
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    await handleResponse(response);
+                } catch (error) {
+                    showToast('请求失败: ' + error.message, 'danger');
+                }
+            });
+        });
+
+        // 关闭设备按钮
+        document.getElementById('closeDeviceButton').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/close_device', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        // 订阅和取消订阅 SSE
+        document.getElementById('subscribeSSEButton').addEventListener('click', () => {
+            const chn = document.getElementById('sseChn').value;
+            if (!chn) {
+                showToast("请填写通道号", 'warning');
+                return;
+            }
+            subscribeSSE(chn);
+        });
+
+        document.getElementById('unsubscribeSSEButton').addEventListener('click', () => {
+            const chn = document.getElementById('sseChn').value;
+            if (!chn) {
+                showToast("请填写通道号", 'warning');
+                return;
+            }
+            closeSSE(chn);
+        });
+
+        const eventSources = {};  // 存储EventSource实例
+
+        function subscribeSSE(chn) {
+            if (eventSources[chn]) {
+                showToast(`已订阅通道 ${chn}`, 'info');
+                return;
+            }
+            const eventSource = new EventSource(`/sse/${chn}`);
+            eventSource.onmessage = function (event) {
+                showToast(`通道 ${chn}: ${event.data}`, 'info');
+            };
+            eventSource.onerror = function () {
+                console.error(`连接出错，正在尝试重新连接... (通道: ${chn})`);
+                // 自动重新订阅
+                setTimeout(() => {
+                    subscribeSSE(chn);
+                }, 5000);  // 5秒后重新订阅
+            };
+            eventSources[chn] = eventSource;
+            showToast(`已订阅通道 ${chn}`, 'success');
+        }
+
+        function closeSSE(chn) {
+            if (eventSources[chn]) {
+                eventSources[chn].close();
+                delete eventSources[chn];
+                showToast(`已关闭通道 ${chn} 的SSE连接`, 'warning');
+            } else {
+                showToast(`未找到通道 ${chn} 的SSE连接`, 'danger');
+            }
+        }
+
+        // 电机0控制事件
+        document.getElementById('enableMotor0').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/enable_motor_0', { method: 'POST' });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        document.getElementById('disableMotor0').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/disable_motor_0', { method: 'POST' });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        // 电机1控制事件
+        document.getElementById('enableMotor1').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/enable_motor_1', { method: 'POST' });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        document.getElementById('disableMotor1').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/disable_motor_1', { method: 'POST' });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        // 电机0设置速度
+        document.getElementById('setMotor0Speed').addEventListener('click', async () => {
+            const speed = document.getElementById('motor0Speed').value;
+            const mode = document.getElementById('motor0Mode').value;
+            const gear = document.getElementById('motor0Gear').value;
+
+            if (!speed || !mode || !gear) {
+                showToast('请填写电机0的速度、模式和挡位', 'warning');
+                return;
+            }
+            try {
+                const response = await fetch('/set_motor_0_speed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: parseInt(mode),
+                        value: parseInt(speed),
+                        gear: parseInt(gear)
+                    })
+                });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+
+        // 电机1设置速度
+        document.getElementById('setMotor1Speed').addEventListener('click', async () => {
+            const speed = document.getElementById('motor1Speed').value;
+            const mode = document.getElementById('motor1Mode').value;
+            const gear = document.getElementById('motor1Gear').value;
+
+            if (!speed || !mode || !gear) {
+                showToast('请填写电机1的速度、模式和挡位', 'warning');
+                return;
+            }
+            try {
+                const response = await fetch('/set_motor_1_speed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode: parseInt(mode),
+                        value: parseInt(speed),
+                        gear: parseInt(gear)
+                    })
+                });
+                await handleResponse(response);
+            } catch (error) {
+                showToast('请求失败: ' + error.message, 'danger');
+            }
+        });
+    </script>
+</body>
+
+</html>

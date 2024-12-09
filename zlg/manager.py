@@ -1,5 +1,3 @@
-# manager.py
-
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor
@@ -87,6 +85,9 @@ class ZLGCanManager:
         :param can_type: CAN 类型。
         :return: StatusResponse 对象。
         """
+
+        self.chn_handles[chn] = 0
+        self.queues[chn] = asyncio.Queue()
         ret = self.zcan.ZCAN_SetValue(
             self.device_handle, f"{chn}/baud_rate", str(baud_rate).encode("utf-8")
         )
@@ -152,10 +153,10 @@ class ZLGCanManager:
                 transmit_num,
             )
 
-            # if ret != transmit_num:
-            #     logger.error("发送失败")
-            #     raise HTTPException(status_code=500, detail="发送失败")
-            # logger.info(f"发送成功：通道 {chn}, 数据 {datas}")
+            if ret != transmit_num:
+                logger.error("发送失败")
+                raise HTTPException(status_code=500, detail="发送失败")
+            logger.info(f"发送成功：通道 {chn}, 数据 {datas}")
             return StatusResponse(status="success", message="发送成功")
         except Exception as e:
             logger.error(f"发送消息时出现错误：{e}")
@@ -171,9 +172,9 @@ class ZLGCanManager:
         if chn in self.auto_send_tasks:
             logger.warning(f"自动发送任务已经在运行：通道 {chn}")
             raise HTTPException(status_code=400, detail="自动发送任务已经在运行")
-        # if chn not in self.chn_handles:
-        #     logger.error(f"通道 {chn} 未打开")
-        #     raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
+        if chn not in self.chn_handles:
+            logger.error(f"通道 {chn} 未打开")
+            raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
 
     def can_start_receive(self, chn: int) -> None:
         """
@@ -185,9 +186,9 @@ class ZLGCanManager:
         if chn in self.receive_tasks:
             logger.warning(f"接收任务已经在运行：通道 {chn}")
             raise HTTPException(status_code=400, detail="接收任务已经在运行")
-        # if chn not in self.chn_handles:
-        #     logger.error(f"通道 {chn} 未打开")
-        #     raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
+        if chn not in self.chn_handles:
+            logger.error(f"通道 {chn} 未打开")
+            raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
 
     async def start_auto_send_message(
         self,
@@ -206,6 +207,7 @@ class ZLGCanManager:
         :param transmit_type: 发送类型。
         :param interval: 发送间隔（毫秒）。
         """
+
         # 异步任务，启动前需进行同步检查
         async def auto_send_loop():
             try:
@@ -231,13 +233,19 @@ class ZLGCanManager:
                 logger.info(f"自动发送任务已停止：通道 {chn}")
             except Exception as e:
                 logger.error(f"停止自动发送任务时出现错误：{e}")
-                return StatusResponse(status="error", message=f"停止自动发送任务时出现错误：{e}")
+                return StatusResponse(
+                    status="error", message=f"停止自动发送任务时出现错误：{e}"
+                )
             finally:
                 del self.auto_send_tasks[chn]
-            return StatusResponse(status="success", message=f"自动发送任务已停止：通道 {chn}")
+            return StatusResponse(
+                status="success", message=f"自动发送任务已停止：通道 {chn}"
+            )
         else:
             logger.info(f"通道 {chn} 没有正在运行的自动发送任务")
-            return StatusResponse(status="info", message=f"通道 {chn} 没有正在运行的自动发送任务")
+            return StatusResponse(
+                status="info", message=f"通道 {chn} 没有正在运行的自动发送任务"
+            )
 
     async def start_receive_message(self, chn: int) -> None:
         """
@@ -245,6 +253,7 @@ class ZLGCanManager:
 
         :param chn: 通道号。
         """
+
         # 异步任务，启动前需进行同步检查
         async def receive_loop():
             try:
@@ -266,8 +275,7 @@ class ZLGCanManager:
                         for i in range(rcv_num):
                             await self.handle_can_data(chn, rcv_msg[i])
                     else:
-                        await self.handle_can_data(chn, 'asd')
-                        # await asyncio.sleep(0.1)
+                        await asyncio.sleep(0.1)
             except asyncio.CancelledError:
                 logger.info(f"接收任务已取消：通道 {chn}")
             except Exception as e:
@@ -295,10 +303,14 @@ class ZLGCanManager:
                 logger.error(f"停止接收任务时出现错误：{e}")
             finally:
                 del self.receive_tasks[chn]
-            return StatusResponse(status="success", message=f"接收任务已停止：通道 {chn}")
+            return StatusResponse(
+                status="success", message=f"接收任务已停止：通道 {chn}"
+            )
         else:
             logger.warning(f"通道 {chn} 没有正在运行的接收任务")
-            return StatusResponse(status="info", message=f"通道 {chn} 没有正在运行的接收任务")
+            return StatusResponse(
+                status="info", message=f"通道 {chn} 没有正在运行的接收任务"
+            )
 
     async def handle_can_data(self, chn: int, message: Any) -> None:
         """

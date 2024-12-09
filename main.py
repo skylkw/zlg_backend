@@ -5,6 +5,8 @@ from fastapi.staticfiles import StaticFiles
 from routes import motor_0_routes, motor_1_routes, zlg_routes, sse_routes
 from fastapi.middleware.cors import CORSMiddleware
 
+from schemas import StatusResponse
+
 
 app = FastAPI()
 
@@ -33,6 +35,10 @@ app.include_router(motor_1_routes.router)
 @app.get("/")
 def index():
     return FileResponse(f"{static_file_abspath}/index.html")
+
+@app.get("/test")
+def test():
+    return StatusResponse(status="ok", message="test success")
 
 
 if __name__ == "__main__":
