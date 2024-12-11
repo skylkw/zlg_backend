@@ -23,7 +23,6 @@ app.add_middleware(
 static_file_abspath = os.path.join(os.path.dirname(__file__), "static")
 app.mount("/static", StaticFiles(directory=static_file_abspath), name="static")
 
-
 # 注册路由
 app.include_router(zlg_routes.router)
 app.include_router(sse_routes.router)
@@ -36,6 +35,7 @@ app.include_router(motor_1_routes.router)
 def index():
     return FileResponse(f"{static_file_abspath}/index.html")
 
+# 测试接口
 @app.get("/test")
 def test():
     return StatusResponse(status="ok", message="test success")

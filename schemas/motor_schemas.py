@@ -1,25 +1,16 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from utils.command import Motor0Gear, Motor0WorkMode, Motor1Gear, Motor1WorkMode
+from utils.command import MotorGear, MotorWorkMode
 
 
-class SetMotor0SpeedRequest(BaseModel):
+class SetMotorSettingsRequest(BaseModel):
 
-    mode: Motor0WorkMode
+    mode: MotorWorkMode
     value: int
-    gear: Motor0Gear
+    gear: MotorGear
     climb: int = 0
-    handbrake: int = 0
-    brake: int = 0
+    hand_brake: int =  Field(default=0, alias="handBrake")
+    foot_brake: int = Field(default=0, alias="footBrake")
     life: int = 0
 
 
-class SetMotor1SpeedRequest(BaseModel):
-
-    mode: Motor1WorkMode
-    value: int
-    gear: Motor1Gear
-    climb: int = 0
-    handbrake: int = 0
-    brake: int = 0
-    life: int = 0

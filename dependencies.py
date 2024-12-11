@@ -23,5 +23,6 @@ def get_zlg_can_manager():
 def get_motor_0_command():
     return motor_0_command
 
+
 def get_motor_1_command():
     return motor_1_command

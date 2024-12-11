@@ -444,7 +444,7 @@ class ZCAN(object):
             print("Exception on ZCAN_Transmit!")
             raise
 
-    def Receive(self, chn_handle, rcv_num, wait_time=c_int(-1)):
+    def Receive(self, chn_handle, rcv_num, wait_time=c_int(-1)):# -> tuple[Any, Any]:
         try:
             rcv_can_msgs = (ZCAN_Receive_Data * rcv_num)()
             ret = self.__dll.ZCAN_Receive(

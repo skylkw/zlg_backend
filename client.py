@@ -28,5 +28,13 @@ t.daemon = True
 t.start()
 
 # 在PyWebview应用程序中加载FastAPI应用程序的URL
-webview.create_window('FastAPI Desktop', f'http://localhost:{port}')
+webview.create_window(
+    "株齿电机控制上位机",
+    f"http://localhost:{port}",
+    width=1024,  # 初始窗口宽度（像素）
+    height=768,  # 初始窗口高度（像素）
+    resizable=True,  # 是否允许调整窗口大小
+    fullscreen=False,  # 是否全屏显示
+    min_size=(800, 600),  # 最小窗口大小
+)
 webview.start()

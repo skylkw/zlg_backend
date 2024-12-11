@@ -2,33 +2,21 @@ from enum import IntEnum
 import struct
 
 
-class Motor0WorkMode(IntEnum):  # 电机工作模式
+class MotorWorkMode(IntEnum):  # 电机工作模式
     FREE_MODE = 0
     TORQUE_MODE = 1
     SPEED_MODE = 2
 
 
-class Motor0Gear(IntEnum):  # 挡位
+class MotorGear(IntEnum):  # 挡位
     GEAR_N = 0
     GEAR_R = 1
     GEAR_D = 2
-
-class Motor1WorkMode(IntEnum):  # 电机工作模式
-    FREE_MODE = 0
-    TORQUE_MODE = 1
-    SPEED_MODE = 2
-
-
-class Motor1Gear(IntEnum):  # 挡位
-    GEAR_N = 0
-    GEAR_R = 1
-    GEAR_D = 2
-
 
 
 class Motor0Command:
-    def __init__(self, channel: int, eff: int, transmit_type: int, interval: int):
-        self.channel = channel
+    def __init__(self, chn: int, eff: int, transmit_type: int, interval: int):
+        self.chn = chn
         self.eff = eff
         self.transmit_type = transmit_type
         self.interval = interval
@@ -41,29 +29,29 @@ class Motor0Command:
         datas = {0x0CF103D0: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
         return datas
 
-    def set_motor_speed(
+    def set_motor_settings(
         self,
-        mode: Motor0WorkMode,
+        mode: MotorWorkMode,
         value: int,
-        gear: Motor0Gear,
+        gear: MotorGear,
         climb: int = 0,
-        handbrake: int = 0,
-        brake: int = 0,
+        hand_brake: int = 0,
+        foot_brake: int = 0,
         life: int = 0,
     ):
         byte0 = 0x01
         byte1 = mode.value
         match mode:
-            case Motor0WorkMode.FREE_MODE:
+            case MotorWorkMode.FREE_MODE:
                 byte_2_3 = 0
                 byte_4_5 = 0
-            case Motor0WorkMode.TORQUE_MODE:
+            case MotorWorkMode.TORQUE_MODE:
                 byte_2_3 = 0
                 byte_4_5 = (value + 2000) * 10
-            case Motor0WorkMode.SPEED_MODE:
+            case MotorWorkMode.SPEED_MODE:
                 byte_2_3 = value + 20000
                 byte_4_5 = 0
-        byte6 = gear.value | (climb << 2) | (handbrake << 3) | (brake << 4)
+        byte6 = gear.value | (climb << 2) | (hand_brake << 3) | (foot_brake << 4)
         byte7 = life
         # 将报文打包，每个元素是一个字节，共8个字节
         packed_data = struct.pack(
@@ -73,11 +61,11 @@ class Motor0Command:
         data = list(struct.unpack("<BBBBBBBB", packed_data))
         datas = {0x0CF103D0: data}
         return datas
-    
+
 
 class Motor1Command:
-    def __init__(self, channel: int, eff: int, transmit_type: int, interval: int):
-        self.channel = channel
+    def __init__(self, chn: int, eff: int, transmit_type: int, interval: int):
+        self.chn = chn
         self.eff = eff
         self.transmit_type = transmit_type
         self.interval = interval
@@ -90,29 +78,29 @@ class Motor1Command:
         datas = {0x0CF203D0: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
         return datas
 
-    def set_motor_speed(
+    def set_motor_settings(
         self,
-        mode: Motor1WorkMode,
+        mode: MotorWorkMode,
         value: int,
-        gear: Motor1Gear,
+        gear: MotorGear,
         climb: int = 0,
-        handbrake: int = 0,
-        brake: int = 0,
+        hand_brake: int = 0,
+        foot_brake: int = 0,
         life: int = 0,
     ):
         byte0 = 0x01
         byte1 = mode.value
         match mode:
-            case Motor1WorkMode.FREE_MODE:
+            case MotorWorkMode.FREE_MODE:
                 byte_2_3 = 0
                 byte_4_5 = 0
-            case Motor1WorkMode.TORQUE_MODE:
+            case MotorWorkMode.TORQUE_MODE:
                 byte_2_3 = 0
                 byte_4_5 = (value + 2000) * 10
-            case Motor1WorkMode.SPEED_MODE:
+            case MotorWorkMode.SPEED_MODE:
                 byte_2_3 = value + 20000
                 byte_4_5 = 0
-        byte6 = gear.value | (climb << 2) | (handbrake << 3) | (brake << 4)
+        byte6 = gear.value | (climb << 2) | (hand_brake << 3) | (foot_brake << 4)
         byte7 = life
         # 将报文打包，每个元素是一个字节，共8个字节
         packed_data = struct.pack(
@@ -122,4 +110,3 @@ class Motor1Command:
         data = list(struct.unpack("<BBBBBBBB", packed_data))
         datas = {0x0CF203D0: data}
         return datas
-

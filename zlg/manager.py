@@ -1,11 +1,12 @@
 import asyncio
+from datetime import datetime
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Any, Optional
 from ctypes import c_uint
 
 from fastapi import HTTPException
-from schemas import StatusResponse  # 假设您已在 schemas.py 中定义了 StatusResponse 模型
+from schemas import StatusResponse 
 from zlg.zlgcan import (
     INVALID_DEVICE_HANDLE,
     ZCAN,
@@ -13,14 +14,22 @@ from zlg.zlgcan import (
     ZCAN_DEVICE_TYPE,
     ZCAN_STATUS_OK,
     ZCAN_TYPE_CAN,
+    ZCAN_Receive_Data,
     ZCAN_Transmit_Data,
 )
 
 # 配置日志
+log_filename = datetime.now().strftime("zcan_manager_%Y%m%d_%H%M%S.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        # 写入文件
+        logging.FileHandler(log_filename),
+        # # 写入文件后输出到控制台
+        # logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -85,9 +94,6 @@ class ZLGCanManager:
         :param can_type: CAN 类型。
         :return: StatusResponse 对象。
         """
-
-        self.chn_handles[chn] = 0
-        self.queues[chn] = asyncio.Queue()
         ret = self.zcan.ZCAN_SetValue(
             self.device_handle, f"{chn}/baud_rate", str(baud_rate).encode("utf-8")
         )
@@ -253,7 +259,6 @@ class ZLGCanManager:
 
         :param chn: 通道号。
         """
-
         # 异步任务，启动前需进行同步检查
         async def receive_loop():
             try:
@@ -274,8 +279,7 @@ class ZLGCanManager:
                         )
                         for i in range(rcv_num):
                             await self.handle_can_data(chn, rcv_msg[i])
-                    else:
-                        await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.5)
             except asyncio.CancelledError:
                 logger.info(f"接收任务已取消：通道 {chn}")
             except Exception as e:
@@ -312,7 +316,7 @@ class ZLGCanManager:
                 status="info", message=f"通道 {chn} 没有正在运行的接收任务"
             )
 
-    async def handle_can_data(self, chn: int, message: Any) -> None:
+    async def handle_can_data(self, chn: int, message: ZCAN_Receive_Data) -> None:
         """
         处理接收到的 CAN 数据。
 

@@ -1,4 +1,5 @@
 import asyncio
+import json
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sse_starlette.sse import EventSourceResponse
 from dependencies import get_zlg_can_manager
@@ -24,9 +25,9 @@ async def sse(
                 break
             try:
                 data = await asyncio.wait_for(queue.get(), timeout=60.0)
-                yield {"data": data}
+                yield json.dumps(data)
             except asyncio.TimeoutError:
                 print(f"通道: {chn} 超时未收到消息，关闭连接")
                 break
-
+            
     return EventSourceResponse(event_generator())
