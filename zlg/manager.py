@@ -1,12 +1,11 @@
 import asyncio
-from datetime import datetime
-import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, Any, Optional
 from ctypes import c_uint
+from utils.logger import logger
 
 from fastapi import HTTPException
-from schemas import StatusResponse 
+from schemas import StatusResponse
 from zlg.zlgcan import (
     INVALID_DEVICE_HANDLE,
     ZCAN,
@@ -17,22 +16,6 @@ from zlg.zlgcan import (
     ZCAN_Receive_Data,
     ZCAN_Transmit_Data,
 )
-
-# 配置日志
-log_filename = datetime.now().strftime("zcan_manager_%Y%m%d_%H%M%S.log")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        # 写入文件
-        logging.FileHandler(log_filename),
-        # # 写入文件后输出到控制台
-        # logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
 
 class ZLGCanManager:
     def __init__(self, dll_path: str, max_workers: int = 10):
@@ -50,6 +33,7 @@ class ZLGCanManager:
         self.parse_functions: Dict[int, Callable[[Any], Any]] = {}
         self.auto_send_tasks: Dict[int, asyncio.Task] = {}
         self.receive_tasks: Dict[int, asyncio.Task] = {}
+        logger.info("初始化 ZLGCanManager 实例")
 
     def register_parse_function(
         self, chn: int, parse_func: Callable[[Any], Any]
@@ -61,6 +45,7 @@ class ZLGCanManager:
         :param parse_func: 解析函数。
         """
         self.parse_functions[chn] = parse_func
+        logger.info(f"注册解析函数：通道 {chn}")
 
     async def open_device(
         self, device_type: ZCAN_DEVICE_TYPE, device_index: int
@@ -79,6 +64,36 @@ class ZLGCanManager:
             raise HTTPException(status_code=500, detail="打开设备失败")
         logger.info("打开设备成功")
         return StatusResponse(status="success", message="打开设备成功")
+    
+    async def get_device_info(self) -> StatusResponse:
+        """
+        获取设备信息。
+
+        :return: StatusResponse 对象，包含设备信息。
+        """
+        if self.device_handle == INVALID_DEVICE_HANDLE:
+            logger.error("设备未打开")
+            raise HTTPException(status_code=400, detail="设备未打开")
+
+        device_info = self.zcan.GetDeviceInf(self.device_handle)
+        if device_info is None:
+            logger.error("获取设备信息失败")
+            raise HTTPException(status_code=500, detail="获取设备信息失败")
+
+        # 将设备信息转换为字典
+        device_info_dict = {
+            "hw_version": device_info.hw_Version,
+            "fw_version": device_info.fw_Version,
+            "dr_version": device_info.dr_Version,
+            "in_version": device_info.in_Version,
+            "irq_num": device_info.irq_Num,
+            "can_num": device_info.can_Num,
+            "serial": ''.join(map(chr, device_info.str_Serial_Num)).strip('\x00'),
+            "hw_type": ''.join(map(chr, device_info.str_hw_Type)).strip('\x00'),
+        }
+
+        logger.info("获取设备信息成功")
+        return StatusResponse(status="success", message="获取设备信息成功", data=device_info_dict)
 
     async def open_channel(
         self,
@@ -213,8 +228,6 @@ class ZLGCanManager:
         :param transmit_type: 发送类型。
         :param interval: 发送间隔（毫秒）。
         """
-
-        # 异步任务，启动前需进行同步检查
         async def auto_send_loop():
             try:
                 while True:
@@ -259,7 +272,6 @@ class ZLGCanManager:
 
         :param chn: 通道号。
         """
-        # 异步任务，启动前需进行同步检查
         async def receive_loop():
             try:
                 while True:
@@ -337,12 +349,6 @@ class ZLGCanManager:
             logger.error(f"处理 CAN 数据时出现错误：{e}")
 
     async def close_channel(self, chn: int) -> StatusResponse:
-        """
-        关闭通道。
-
-        :param chn: 通道号。
-        :return: StatusResponse 对象。
-        """
         if chn not in self.chn_handles:
             logger.warning(f"通道 {chn} 未打开")
             raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
@@ -361,11 +367,6 @@ class ZLGCanManager:
             raise HTTPException(status_code=500, detail=f"关闭通道失败：{chn}")
 
     async def close_device(self) -> StatusResponse:
-        """
-        关闭设备。
-
-        :return: StatusResponse 对象。
-        """
         for chn in list(self.auto_send_tasks.keys()):
             await self.stop_auto_send_message(chn)
         for chn in list(self.receive_tasks.keys()):
@@ -383,10 +384,4 @@ class ZLGCanManager:
             raise HTTPException(status_code=500, detail="关闭设备失败")
 
     def get_queue(self, chn: int) -> Optional[asyncio.Queue]:
-        """
-        获取指定通道的队列。
-
-        :param chn: 通道号。
-        :return: 队列对象。
-        """
         return self.queues.get(chn)

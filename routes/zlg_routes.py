@@ -31,6 +31,18 @@ async def open_device(
     return await zlg_can_manager.open_device(device_type, request.device_index)
 
 
+@router.get("/device_info")
+async def get_device_info(zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager)):
+    """
+    获取设备信息。
+
+    :param zlg_can_manager: ZLGCanManager 实例。
+    :return: 设备信息。
+    """
+    return await zlg_can_manager.get_device_info()
+
+
+
 @router.post("/open_channel")
 async def open_channel(
     request: OpenChannelRequest,

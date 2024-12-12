@@ -3,10 +3,11 @@ import json
 from fastapi import APIRouter, Request, HTTPException, Depends
 from sse_starlette.sse import EventSourceResponse
 from dependencies import get_zlg_can_manager
+import utils
 from zlg.manager import ZLGCanManager
+from utils.logger import logger
 
 router = APIRouter()
-
 
 @router.get("/sse/{chn}")
 async def sse(
@@ -19,15 +20,13 @@ async def sse(
         raise HTTPException(status_code=404, detail=f"通道 {chn} 未找到")
 
     async def event_generator():
-        while True:
-            if await request.is_disconnected():
-                print(f"客户端已断开连接 (通道: {chn})")
-                break
+        while not await request.is_disconnected():
             try:
                 data = await asyncio.wait_for(queue.get(), timeout=60.0)
                 yield json.dumps(data)
             except asyncio.TimeoutError:
-                print(f"通道: {chn} 超时未收到消息，关闭连接")
+                logger.warning(f"通道 {chn} 无数据")
                 break
-            
+        logger.info(f"通道 {chn} 断开连接")
+
     return EventSourceResponse(event_generator())
