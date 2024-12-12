@@ -1,5 +1,3 @@
-# app/dependencies.py
-
 import sys
 from utils.command import Motor0Command, Motor1Command
 from zlg.manager import ZLGCanManager
