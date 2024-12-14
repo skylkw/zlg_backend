@@ -17,8 +17,8 @@ def parse_motor_0(message: ZCAN_Receive_Data) -> dict[str, int | float | str]:
             return {
                 "torque": round(torque / 10 - 2000, 2),
                 "speed": speed - 20000,
-                "input_voltage": input_vol / 10,
-                "input_current": round(input_curr / 10 - 1000, 2),
+                "inputVoltage": input_vol / 10,
+                "inputCurrent": round(input_curr / 10 - 1000, 2),
             }
 
         case 0x0CFF02EF:
@@ -81,14 +81,14 @@ def parse_motor_0(message: ZCAN_Receive_Data) -> dict[str, int | float | str]:
             motor_temp -= 40
 
             return {
-                "work_mode": work_mode_str,
-                "hill_assists": hill_assists_str,
-                "mcu_status": mcu_status_str,
-                "fault_code": fault_code,
-                "fault_level": fault_level_str,
-                "software_version": software_version,
-                "mcu_temperature": mcu_temp,
-                "motor_temperature": motor_temp,
+                "workMode": work_mode_str,
+                "hillAssists": hill_assists_str,
+                "mcuStatus": mcu_status_str,
+                "faultCode": fault_code,
+                "faultLevel": fault_level_str,
+                "softwareVersion": software_version,
+                "mcuTemperature": mcu_temp,
+                "motorTemperature": motor_temp,
             }
 
         case 0x0CFF03EF:
@@ -103,7 +103,7 @@ def parse_motor_0(message: ZCAN_Receive_Data) -> dict[str, int | float | str]:
 
             return {
                 "position": round(position * 0.0055, 2),
-                "mechanical_position": round(mechanical_position * 0.0055, 2),
+                "mechanicalPosition": round(mechanical_position * 0.0055, 2),
             }
 
         case _:

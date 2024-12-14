@@ -342,7 +342,6 @@ class ZLGCanManager:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(self.executor, parse_func, message)
             queue = self.queues.get(chn)
-            print(result)
             if queue:
                 await queue.put(result)
         except Exception as e:
