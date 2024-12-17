@@ -43,6 +43,7 @@ async def disable_motor_1(
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
     motor_1_command: Motor1Command = Depends(get_motor_1_command),
 ):
+    await zlg_can_manager.send_message(motor_1_command.chn, motor_1_command.disable_motor())
     await zlg_can_manager.stop_receive_message(motor_1_command.chn)
     await zlg_can_manager.stop_auto_send_message(motor_1_command.chn)
     return StatusResponse(status="success", message="电机 1 失能成功")

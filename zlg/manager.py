@@ -217,7 +217,7 @@ class ZLGCanManager:
         datas: Dict[int, list[int]],
         eff: int = 1,
         transmit_type: int = 0,
-        interval: int = 50,
+        interval: int = 10,
     ) -> None:
         """
         启动自动定时发送消息。

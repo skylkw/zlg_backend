@@ -10,8 +10,8 @@ class MotorWorkMode(IntEnum):  # 电机工作模式
 
 class MotorGear(IntEnum):  # 挡位
     GEAR_N = 0
-    GEAR_R = 1
-    GEAR_D = 2
+    GEAR_D = 1
+    GEAR_R = 2
 
 
 class Motor0Command:
@@ -22,7 +22,7 @@ class Motor0Command:
         self.interval = interval
 
     def enable_motor(self):
-        datas = {0x0CF103D0: [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
+        datas = {0x0CF103D0: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
         return datas
 
     def disable_motor(self):
@@ -71,7 +71,7 @@ class Motor1Command:
         self.interval = interval
 
     def enable_motor(self):
-        datas = {0x0CF203D0: [0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
+        datas = {0x0CF203D0: [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]}
         return datas
 
     def disable_motor(self):
