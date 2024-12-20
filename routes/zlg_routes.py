@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from schemas import StatusResponse
 from schemas.zlg_schemas import (
     AutoSendMessageRequest,
-    ChannelRequest,
+    MotorRequest,
     OpenChannelRequest,
     OpenDeviceRequest,
     SendMessageRequest,
@@ -32,7 +32,9 @@ async def open_device(
 
 
 @router.get("/device_info")
-async def get_device_info(zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager)):
+async def get_device_info(
+    zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
+):
     """
     获取设备信息。
 
@@ -40,7 +42,6 @@ async def get_device_info(zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_m
     :return: 设备信息。
     """
     return await zlg_can_manager.get_device_info()
-
 
 
 @router.post("/open_channel")
@@ -89,11 +90,11 @@ async def start_auto_send_message(
     :return: 自动发送任务启动的状态响应。
     """
     # 停止已存在的自动发送任务（如果有）
-    await zlg_can_manager.stop_auto_send_message(request.chn)
+    await zlg_can_manager.stop_auto_send_message(request.chn, request.motor_id)
     # 启动新的自动发送任务
     asyncio.create_task(
         zlg_can_manager.start_auto_send_message(
-            request.chn, request.datas, request.interval
+            request.chn, request.motor_id, request.datas, request.interval
         )
     )
     return StatusResponse(status="success", message="自动发送任务启动成功")
@@ -101,7 +102,7 @@ async def start_auto_send_message(
 
 @router.post("/stop_auto_send_message")
 async def stop_auto_send_message(
-    request: ChannelRequest,
+    request: MotorRequest,
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
 ):
     """
@@ -111,12 +112,12 @@ async def stop_auto_send_message(
     :param zlg_can_manager: ZLGCanManager 实例。
     :return: 自动发送任务停止的结果。
     """
-    return await zlg_can_manager.stop_auto_send_message(request.chn)
+    return await zlg_can_manager.stop_auto_send_message(request.chn, request.motor_id)
 
 
 @router.post("/start_receive_message")
 async def start_receive_message(
-    request: ChannelRequest,
+    request: MotorRequest,
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
 ):
     """
@@ -135,7 +136,7 @@ async def start_receive_message(
 
 @router.post("/stop_receive_message")
 async def stop_receive_message(
-    request: ChannelRequest,
+    request: MotorRequest,
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
 ):
     """
@@ -150,7 +151,7 @@ async def stop_receive_message(
 
 @router.post("/close_channel")
 async def close_channel(
-    request: ChannelRequest,
+    request: MotorRequest,
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
 ):
     """

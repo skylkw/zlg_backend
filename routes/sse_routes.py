@@ -1,6 +1,6 @@
 import asyncio
 import json
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Query, Request, HTTPException, Depends
 from sse_starlette.sse import EventSourceResponse
 from dependencies import get_zlg_can_manager
 import utils
@@ -9,13 +9,15 @@ from utils.logger import logger
 
 router = APIRouter()
 
-@router.get("/sse/{chn}")
+
+@router.get("/sse/{chn}/{motor_id}")
 async def sse(
     request: Request,
     chn: int,
+    motor_id: int = Query(alias="motorId"),
     zlg_can_manager: ZLGCanManager = Depends(get_zlg_can_manager),
 ):
-    queue = zlg_can_manager.get_queue(chn)
+    queue = zlg_can_manager.get_queue(chn, motor_id)
     if queue is None:
         raise HTTPException(status_code=404, detail=f"通道 {chn} 未找到")
 

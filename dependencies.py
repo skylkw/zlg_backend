@@ -9,9 +9,9 @@ dll_path = os.path.join(os.path.dirname(__file__), "zlgcan_x64", "zlgcan.dll")
 
 
 zlcan_manager = ZLGCanManager(dll_path)
-motor_0_command = Motor0Command(0, 1, 0, 20)
+motor_0_command = Motor0Command(0, 1, 1, 0, 20)
 
-motor_1_command = Motor1Command(1, 1, 0, 20)
+motor_1_command = Motor1Command(0, 1, 1, 0, 20)
 
 
 def get_zlg_can_manager():

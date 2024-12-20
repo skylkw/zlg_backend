@@ -15,8 +15,9 @@ class MotorGear(IntEnum):  # 挡位
 
 
 class Motor0Command:
-    def __init__(self, chn: int, eff: int, transmit_type: int, interval: int):
+    def __init__(self, chn: int, id: int, eff: int, transmit_type: int, interval: int):
         self.chn = chn
+        self.id = id
         self.eff = eff
         self.transmit_type = transmit_type
         self.interval = interval
@@ -64,8 +65,9 @@ class Motor0Command:
 
 
 class Motor1Command:
-    def __init__(self, chn: int, eff: int, transmit_type: int, interval: int):
+    def __init__(self, chn: int, id: int, eff: int, transmit_type: int, interval: int):
         self.chn = chn
+        self.id = id
         self.eff = eff
         self.transmit_type = transmit_type
         self.interval = interval

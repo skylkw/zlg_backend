@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from tkinter import NO
 from typing import Callable, Dict, Any, Optional
 from ctypes import c_uint
 from utils.logger import logger
@@ -17,6 +18,7 @@ from zlg.zlgcan import (
     ZCAN_Transmit_Data,
 )
 
+
 class ZLGCanManager:
     def __init__(self, dll_path: str, max_workers: int = 10):
         """
@@ -29,23 +31,38 @@ class ZLGCanManager:
         self.zcan = ZCAN(dll_path)
         self.device_handle = INVALID_DEVICE_HANDLE
         self.chn_handles: Dict[int, Any] = {}
-        self.queues: Dict[int, asyncio.Queue] = {}
-        self.parse_functions: Dict[int, Callable[[Any], Any]] = {}
-        self.auto_send_tasks: Dict[int, asyncio.Task] = {}
+        # 格式: {channel_id: {motor_id: asyncio.Queue}}
+        self.queues: Dict[int, Dict[int, asyncio.Queue]] = {}
+        # 格式: {channel_id: {motor_id: parse_func}}
+        self.parse_functions: Dict[int, Dict[int, Callable]] = {}
+        # 格式: {channel_id: {motor_id: asyncio.Task}}
+        self.auto_send_tasks: Dict[int, Dict[int, asyncio.Task]] = {}
+        # 格式: {channel_id: asyncio.Task}
         self.receive_tasks: Dict[int, asyncio.Task] = {}
         logger.info("初始化 ZLGCanManager 实例")
 
-    def register_parse_function(
-        self, chn: int, parse_func: Callable[[Any], Any]
-    ) -> None:
+    def register_motor(self, chn: int, motor_id: int, parse_func: Callable) -> None:
         """
-        注册解析函数。
+        注册电机。
 
         :param chn: 通道号。
+        :param motor_id: 电机 ID。
         :param parse_func: 解析函数。
         """
-        self.parse_functions[chn] = parse_func
-        logger.info(f"注册解析函数：通道 {chn}")
+        self.parse_functions[chn][motor_id] = parse_func
+        self.queues[chn][motor_id] = asyncio.Queue()
+        logger.info(f"注册解析函数：通道 {chn}, 电机 {motor_id}")
+
+    def unregister_motor(self, chn: int, motor_id: int) -> None:
+        """
+        注销电机。
+
+        :param chn: 通道号。
+        :param motor_id: 电机 ID。
+        """
+        self.parse_functions[chn].pop(motor_id, None)
+        self.queues[chn].pop(motor_id, None)
+        logger.info(f"注销解析函数：通道 {chn}, 电机 {motor_id}")
 
     async def open_device(
         self, device_type: ZCAN_DEVICE_TYPE, device_index: int
@@ -64,7 +81,7 @@ class ZLGCanManager:
             raise HTTPException(status_code=500, detail="打开设备失败")
         logger.info("打开设备成功")
         return StatusResponse(status="success", message="打开设备成功")
-    
+
     async def get_device_info(self) -> StatusResponse:
         """
         获取设备信息。
@@ -88,12 +105,14 @@ class ZLGCanManager:
             "in_version": device_info.in_Version,
             "irq_num": device_info.irq_Num,
             "can_num": device_info.can_Num,
-            "serial": ''.join(map(chr, device_info.str_Serial_Num)).strip('\x00'),
-            "hw_type": ''.join(map(chr, device_info.str_hw_Type)).strip('\x00'),
+            "serial": "".join(map(chr, device_info.str_Serial_Num)).strip("\x00"),
+            "hw_type": "".join(map(chr, device_info.str_hw_Type)).strip("\x00"),
         }
 
         logger.info("获取设备信息成功")
-        return StatusResponse(status="success", message="获取设备信息成功", data=device_info_dict)
+        return StatusResponse(
+            status="success", message="获取设备信息成功", data=device_info_dict
+        )
 
     async def open_channel(
         self,
@@ -131,9 +150,7 @@ class ZLGCanManager:
         if ret != ZCAN_STATUS_OK:
             logger.error(f"启动通道 {chn} 失败")
             raise HTTPException(status_code=500, detail=f"启动通道 {chn} 失败")
-
         self.chn_handles[chn] = chh_handle
-        self.queues[chn] = asyncio.Queue()
         logger.info(f"通道 {chn} 启动成功")
         return StatusResponse(status="success", message=f"通道 {chn} 启动成功")
 
@@ -183,15 +200,17 @@ class ZLGCanManager:
             logger.error(f"发送消息时出现错误：{e}")
             raise HTTPException(status_code=500, detail=f"发送失败：{e}")
 
-    def can_start_auto_send(self, chn: int) -> None:
+    def can_start_auto_send(self, chn: int, motor_id: int) -> None:
         """
         检查是否可以启动自动发送任务。
 
         :param chn: 通道号。
+        :param motor_id: 电机 ID。
         :raises HTTPException: 如果任务已在运行或通道未打开。
         """
-        if chn in self.auto_send_tasks:
-            logger.warning(f"自动发送任务已经在运行：通道 {chn}")
+        # 判断当前电机是否已经在运行自动发送任务
+        if chn in self.auto_send_tasks and motor_id in self.auto_send_tasks[chn]:
+            logger.warning(f"自动发送任务已经在运行：通道 {chn}, 电机 {motor_id}")
             raise HTTPException(status_code=400, detail="自动发送任务已经在运行")
         if chn not in self.chn_handles:
             logger.error(f"通道 {chn} 未打开")
@@ -204,9 +223,6 @@ class ZLGCanManager:
         :param chn: 通道号。
         :raises HTTPException: 如果任务已在运行或通道未打开。
         """
-        if chn in self.receive_tasks:
-            logger.warning(f"接收任务已经在运行：通道 {chn}")
-            raise HTTPException(status_code=400, detail="接收任务已经在运行")
         if chn not in self.chn_handles:
             logger.error(f"通道 {chn} 未打开")
             raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
@@ -214,6 +230,7 @@ class ZLGCanManager:
     async def start_auto_send_message(
         self,
         chn: int,
+        motor_id: int,
         datas: Dict[int, list[int]],
         eff: int = 1,
         transmit_type: int = 0,
@@ -223,11 +240,13 @@ class ZLGCanManager:
         启动自动定时发送消息。
 
         :param chn: 通道号。
+        :param motor_id: 电机 ID。
         :param datas: 发送的数据。
         :param eff: 扩展帧标志。
         :param transmit_type: 发送类型。
         :param interval: 发送间隔（毫秒）。
         """
+
         async def auto_send_loop():
             try:
                 while True:
@@ -239,17 +258,17 @@ class ZLGCanManager:
                 logger.error(f"自动发送任务错误：{e}")
 
         task = asyncio.create_task(auto_send_loop())
-        self.auto_send_tasks[chn] = task
+        self.auto_send_tasks[chn][motor_id] = task
         logger.info(f"自动发送任务已启动：通道 {chn}")
 
-    async def stop_auto_send_message(self, chn: int) -> StatusResponse:
-        task = self.auto_send_tasks.get(chn)
+    async def stop_auto_send_message(self, chn: int, motor_id: int) -> StatusResponse:
+        task = self.auto_send_tasks.get(chn, {}).get(motor_id)
         if task:
             task.cancel()
             try:
                 await task
             except asyncio.CancelledError:
-                logger.info(f"自动发送任务已停止：通道 {chn}")
+                logger.info(f"自动发送任务已停止：通道 {chn}, 电机 {motor_id}")
             except Exception as e:
                 logger.error(f"停止自动发送任务时出现错误：{e}")
                 return StatusResponse(
@@ -258,12 +277,14 @@ class ZLGCanManager:
             finally:
                 del self.auto_send_tasks[chn]
             return StatusResponse(
-                status="success", message=f"自动发送任务已停止：通道 {chn}"
+                status="success",
+                message=f"自动发送任务已停止：通道 {chn}, 电机 {motor_id}",
             )
         else:
             logger.info(f"通道 {chn} 没有正在运行的自动发送任务")
             return StatusResponse(
-                status="info", message=f"通道 {chn} 没有正在运行的自动发送任务"
+                status="info",
+                message=f"通道 {chn}, 电机 {motor_id} 没有正在运行的自动发送任务",
             )
 
     async def start_receive_message(self, chn: int) -> None:
@@ -272,6 +293,7 @@ class ZLGCanManager:
 
         :param chn: 通道号。
         """
+
         async def receive_loop():
             try:
                 while True:
@@ -335,13 +357,14 @@ class ZLGCanManager:
         :param chn: 通道号。
         :param message: 接收到的消息。
         """
-        parse_func = self.parse_functions.get(chn)
+        motor_id = (message.frame.can_id >> 16) & 0xFF
+        parse_func = self.parse_functions.get(chn, {}).get(motor_id)
         if not parse_func:
             return
         try:
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(self.executor, parse_func, message)
-            queue = self.queues.get(chn)
+            queue = self.queues.get(chn, {}).get(motor_id)
             if queue:
                 await queue.put(result)
         except Exception as e:
@@ -352,7 +375,10 @@ class ZLGCanManager:
             logger.warning(f"通道 {chn} 未打开")
             raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
 
-        await self.stop_auto_send_message(chn)
+        # 关闭所有的任务
+        if chn in self.auto_send_tasks:
+            for motor_id in list(self.auto_send_tasks[chn].keys()):
+                await self.stop_auto_send_message(chn, motor_id)
         await self.stop_receive_message(chn)
 
         ret = self.zcan.ResetCAN(self.chn_handles.get(chn))
@@ -367,7 +393,8 @@ class ZLGCanManager:
 
     async def close_device(self) -> StatusResponse:
         for chn in list(self.auto_send_tasks.keys()):
-            await self.stop_auto_send_message(chn)
+            for motor_id in list(self.auto_send_tasks[chn].keys()):
+                await self.stop_auto_send_message(chn, motor_id)
         for chn in list(self.receive_tasks.keys()):
             await self.stop_receive_message(chn)
 
@@ -382,5 +409,5 @@ class ZLGCanManager:
             logger.error("关闭设备失败")
             raise HTTPException(status_code=500, detail="关闭设备失败")
 
-    def get_queue(self, chn: int) -> Optional[asyncio.Queue]:
-        return self.queues.get(chn)
+    def get_queue(self, chn: int, motor_id: int) -> Optional[asyncio.Queue]:
+        return self.queues.get(chn, {}).get(motor_id)

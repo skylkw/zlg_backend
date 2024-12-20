@@ -16,22 +16,22 @@ async def enable_motor_1(
     motor_1_command: Motor1Command = Depends(get_motor_1_command),
 ):
     # 停止之前的自动发送和接收任务
-    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn)
+    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn, motor_1_command.id)
     await zlg_can_manager.stop_receive_message(motor_1_command.chn)
 
     # 注册解析函数
-    zlg_can_manager.register_parse_function(motor_1_command.chn, parse_motor_1)
+    zlg_can_manager.register_motor(motor_1_command.chn,motor_1_command.id, parse_motor_1)
     datas = motor_1_command.enable_motor()
 
     # 启动新的自动发送任务前进行检查
-    zlg_can_manager.can_start_auto_send(motor_1_command.chn)
+    zlg_can_manager.can_start_auto_send(motor_1_command.chn, motor_1_command.id)
 
     # 启动新的接收任务前进行检查
     zlg_can_manager.can_start_receive(motor_1_command.chn)
 
     # 启动自动发送和接收任务
     asyncio.create_task(
-        zlg_can_manager.start_auto_send_message(motor_1_command.chn, datas, interval=20)
+        zlg_can_manager.start_auto_send_message(motor_1_command.chn,    motor_1_command.id, datas, interval=20)
     )
     asyncio.create_task(zlg_can_manager.start_receive_message(motor_1_command.chn))
 
@@ -44,8 +44,8 @@ async def disable_motor_1(
     motor_1_command: Motor1Command = Depends(get_motor_1_command),
 ):
     await zlg_can_manager.send_message(motor_1_command.chn, motor_1_command.disable_motor())
-    await zlg_can_manager.stop_receive_message(motor_1_command.chn)
-    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn)
+    zlg_can_manager.unregister_motor(motor_1_command.chn, motor_1_command.id)
+    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn, motor_1_command.id)
     return StatusResponse(status="success", message="电机 1 失能成功")
 
 
@@ -56,7 +56,7 @@ async def set_motor_1_settings(
     motor_1_command: Motor1Command = Depends(get_motor_1_command),
 ):
     # 停止之前的自动发送任务
-    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn)
+    await zlg_can_manager.stop_auto_send_message(motor_1_command.chn, motor_1_command.id)
 
     # 设置电机参数
     datas = motor_1_command.set_motor_settings(
@@ -64,11 +64,11 @@ async def set_motor_1_settings(
     )
 
     # 启动新的自动发送任务前进行检查
-    zlg_can_manager.can_start_auto_send(motor_1_command.chn)
+    zlg_can_manager.can_start_auto_send(motor_1_command.chn, motor_1_command.id)
 
     # 启动新的自动发送任务
     asyncio.create_task(
-        zlg_can_manager.start_auto_send_message(motor_1_command.chn, datas, interval=20)
+        zlg_can_manager.start_auto_send_message(motor_1_command.chn,motor_1_command.id, datas, interval=20)
     )
 
     return StatusResponse(status="success", message="电机 1 速度设置成功")
