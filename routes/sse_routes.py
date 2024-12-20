@@ -10,7 +10,7 @@ from utils.logger import logger
 router = APIRouter()
 
 
-@router.get("/sse/{chn}/{motor_id}")
+@router.get("/sse/{chn}/{motorId}")
 async def sse(
     request: Request,
     chn: int,

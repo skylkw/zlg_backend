@@ -49,6 +49,9 @@ class ZLGCanManager:
         :param motor_id: 电机 ID。
         :param parse_func: 解析函数。
         """
+        if chn not in self.queues:
+            raise HTTPException(status_code=400, detail=f"通道 {chn} 未打开")
+
         self.parse_functions[chn][motor_id] = parse_func
         self.queues[chn][motor_id] = asyncio.Queue()
         logger.info(f"注册解析函数：通道 {chn}, 电机 {motor_id}")
